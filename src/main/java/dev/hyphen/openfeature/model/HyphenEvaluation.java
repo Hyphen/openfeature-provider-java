@@ -68,16 +68,4 @@ public class HyphenEvaluation {
     public void setVariant(String variant) {
         this.variant = variant;
     }
-
-    @Override
-    public String toString() {
-        return "HyphenEvaluation{" +
-                "key='" + key + '\'' +
-                ", value='" + value + '\'' +
-                ", type='" + type + '\'' +
-                ", reason='" + reason + '\'' +
-                ", errorMessage='" + errorMessage + '\'' +
-                ", variant='" + variant + '\'' +
-                '}';
-    }
 }

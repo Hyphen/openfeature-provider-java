@@ -49,13 +49,4 @@ public class EvaluationResponse {
                 .map(map -> map.get(key))
                 .orElse(null);
     }
-
-    @Override
-    public String toString() {
-        return "EvaluationResponse{" +
-                "id='" + id + '\'' +
-                ", targetingKey='" + targetingKey + '\'' +
-                ", toggles=" + toggles +
-                '}';
-    }
 }
