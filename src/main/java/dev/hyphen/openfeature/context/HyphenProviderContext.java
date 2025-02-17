@@ -43,7 +43,7 @@ public class HyphenProviderContext {
         }
 
         if (ipAddress != null) {
-            context.add("ip_address", ipAddress);
+            context.add("ipAddress", ipAddress);
         }
 
         if (customAttributes != null) {
@@ -51,7 +51,7 @@ public class HyphenProviderContext {
             for (Map.Entry<String, String> entry : customAttributes.entrySet()) {
                 customStruct.add(entry.getKey(), entry.getValue());
             }
-            context.add("custom_attributes", customStruct);
+            context.add("customAttributes", customStruct);
         }
 
         return context;

@@ -38,7 +38,7 @@ public class UserAttributes {
         map.put("email", email);
         map.put("name", name);
         if (customAttributes != null && !customAttributes.isEmpty()) {
-            map.put("custom_attributes", customAttributes);
+            map.put("customAttributes", customAttributes);
         }
         return map;
     }

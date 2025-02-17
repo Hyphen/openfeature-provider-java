@@ -53,10 +53,11 @@ public class TelemetryHook implements Hook {
         return map;
     }
 
-    private Map<String, Object> cleanupDetails(FlagEvaluationDetails<?> details) {
+    private Map<String, Object> cleanupDetails(HookContext context, FlagEvaluationDetails<?> details) {
         Map<String, Object> cleanDetails = new HashMap<>();
-        cleanDetails.put("flagKey", details.getFlagKey());
+        cleanDetails.put("key", details.getFlagKey());
         cleanDetails.put("value", details.getValue());
+        cleanDetails.put("type", context.getType().toString().toLowerCase());
         
         if (details.getVariant() != null) {
             cleanDetails.put("variant", details.getVariant());
@@ -77,7 +78,7 @@ public class TelemetryHook implements Hook {
     @Override
     public void after(HookContext context, FlagEvaluationDetails details, Map hints) {
         Map<String, Object> data = new HashMap<>();
-        data.put("toggle", cleanupDetails(details));
+        data.put("toggle", cleanupDetails(context, details));
         
         Map<String, Object> contextMap = contextToMap(context.getCtx());
         
