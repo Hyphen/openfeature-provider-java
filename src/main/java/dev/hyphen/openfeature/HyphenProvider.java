@@ -25,6 +25,10 @@ public class HyphenProvider implements FeatureProvider {
         this.options = options;
     }
 
+    public HyphenClient getClient() {
+        return client;
+    }
+
     @Override
     public Metadata getMetadata() {
         return () -> "hyphen-provider-java";
@@ -124,17 +128,5 @@ public class HyphenProvider implements FeatureProvider {
                 .variant(evaluation.getVariant())
                 .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
                 .build();
-    }
-
-    public void sendTelemetry(String key, FlagEvaluationDetails<?> details) {
-        HyphenEvaluation evaluation = new HyphenEvaluation();
-        evaluation.setKey(key);
-        evaluation.setValue(String.valueOf(details.getValue()));
-        evaluation.setType("unknown");
-        evaluation.setReason(details.getReason());
-        evaluation.setErrorMessage(details.getErrorMessage());
-        evaluation.setVariant(details.getVariant());
-
-        client.postTelemetry(key, evaluation);
     }
 }

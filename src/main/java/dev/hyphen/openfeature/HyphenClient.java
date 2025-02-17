@@ -26,11 +26,9 @@ public class HyphenClient {
     private final Cache<String, EvaluationResponse> cache;
     private final String publicKey;
     private final List<String> horizonUrls;
-    private final HyphenProviderOptions options;
 
     public HyphenClient(String publicKey, HyphenProviderOptions options) {
         this.publicKey = publicKey;
-        this.options = options;
         this.horizonUrls = new ArrayList<>(options.getHorizonUrls());
         this.horizonUrls.add(buildDefaultHorizonUrl(publicKey));
 
@@ -58,7 +56,7 @@ public class HyphenClient {
         if (response != null) {
             cache.put(cacheKey, response);
         }
-        return response;
+        return response; 
     }
 
     private String generateCacheKey(EvaluationContext context) {
@@ -144,9 +142,9 @@ public class HyphenClient {
         return objectMapper.writeValueAsString(contextMap);
     }
 
-    public void postTelemetry(String key, HyphenEvaluation evaluation) {
+    public void postTelemetry(Map<String, Object> payload) {
         try {
-            tryUrls("/toggle/telemetry", objectMapper.writeValueAsString(evaluation));
+            tryUrls("/toggle/telemetry", objectMapper.writeValueAsString(payload));
         } catch (Exception e) {
             logger.warn("Failed to post telemetry", e);
         }
