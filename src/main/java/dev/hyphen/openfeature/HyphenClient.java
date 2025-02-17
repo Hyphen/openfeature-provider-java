@@ -46,7 +46,6 @@ public class HyphenClient {
 
     public EvaluationResponse evaluate(EvaluationContext context) throws IOException {
         String payload = prepareEvaluatePayload(context);
-        System.out.println("\n[EVALUATE PAYLOAD] " + payload + "\n");
         
         String cacheKey = generateCacheKey(context);
         EvaluationResponse cachedResponse = cache.getIfPresent(cacheKey);
@@ -102,10 +101,6 @@ public class HyphenClient {
                         throw new IOException("Unexpected response " + response);
                     }
                     String responseBody = response.body().string();
-                    System.out.println("\n[API RESPONSE]");
-                    System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(
-                        objectMapper.readValue(responseBody, Map.class)));
-                    System.out.println();
                     return objectMapper.readValue(responseBody, EvaluationResponse.class);
                 }
             } catch (IOException e) {
@@ -156,18 +151,12 @@ public class HyphenClient {
 
     private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
         Map<String, Object> contextMap = contextToMap(context);
-        String jsonContext = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(contextMap);
-        System.out.println("\n[CONTEXT AS JSON]");
-        System.out.println(jsonContext);
-        System.out.println();
-        return jsonContext;
+        return objectMapper.writeValueAsString(contextMap);
     }
 
     public void postTelemetry(String key, HyphenEvaluation evaluation) {
         try {
-            String payload = objectMapper.writeValueAsString(evaluation);
-            System.out.println("\n[TELEMETRY PAYLOAD] " + payload + "\n");
-            tryUrls("/toggle/telemetry", payload);
+            tryUrls("/toggle/telemetry", objectMapper.writeValueAsString(evaluation));
         } catch (Exception e) {
             logger.warn("Failed to post telemetry", e);
         }
