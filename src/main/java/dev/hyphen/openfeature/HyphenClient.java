@@ -3,7 +3,7 @@ package dev.hyphen.openfeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import dev.hyphen.openfeature.model.Evaluation;
+import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
 import dev.openfeature.sdk.EvaluationContext;
 import okhttp3.*;
@@ -163,7 +163,7 @@ public class HyphenClient {
         return jsonContext;
     }
 
-    public void postTelemetry(String key, Evaluation evaluation) {
+    public void postTelemetry(String key, HyphenEvaluation evaluation) {
         try {
             String payload = objectMapper.writeValueAsString(evaluation);
             System.out.println("\n[TELEMETRY PAYLOAD] " + payload + "\n");

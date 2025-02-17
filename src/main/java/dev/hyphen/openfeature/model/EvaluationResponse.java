@@ -8,11 +8,11 @@ public class EvaluationResponse {
     @JsonProperty("id")
     private String id;
 
-    @JsonProperty("targetingKey")
+    @JsonProperty("targetingKey") 
     private String targetingKey;
 
     @JsonProperty("toggles")
-    private Map<String, Evaluation> toggles;
+    private Map<String, HyphenEvaluation> toggles;
 
     public EvaluationResponse() {
         this.toggles = new HashMap<>();
@@ -34,19 +34,19 @@ public class EvaluationResponse {
         this.targetingKey = targetingKey;
     }
 
-    public Map<String, Evaluation> getToggles() {
+    public Map<String, HyphenEvaluation> getToggles() {
         return toggles;
     }
 
-    public void setToggles(Map<String, Evaluation> toggles) {
+    public void setToggles(Map<String, HyphenEvaluation> toggles) {
         this.toggles = toggles;
     }
 
-    public Evaluation getToggle(String key) {
+    public HyphenEvaluation getToggle(String key) {
         return toggles.get(key);
     }
 
-    public void addToggle(String key, Evaluation evaluation) {
+    public void addToggle(String key, HyphenEvaluation evaluation) {
         toggles.put(key, evaluation);
     }
 }

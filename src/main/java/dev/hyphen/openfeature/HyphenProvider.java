@@ -2,7 +2,7 @@ package dev.hyphen.openfeature;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.hyphen.openfeature.hook.TelemetryHook;
-import dev.hyphen.openfeature.model.Evaluation;
+import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
 import dev.openfeature.sdk.*;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
-            Evaluation evaluation = response.getToggle(key);
+            HyphenEvaluation evaluation = response.getToggle(key);
             
             if (evaluation == null) {
                 return ProviderEvaluation.<Boolean>builder()
@@ -87,7 +87,7 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<String> getStringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
-            Evaluation evaluation = response.getToggle(key);
+            HyphenEvaluation evaluation = response.getToggle(key);
             
             if (evaluation == null) {
                 return ProviderEvaluation.<String>builder()
@@ -132,7 +132,7 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
-            Evaluation evaluation = response.getToggle(key);
+            HyphenEvaluation evaluation = response.getToggle(key);
             
             if (evaluation == null) {
                 return ProviderEvaluation.<Integer>builder()
@@ -177,7 +177,7 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
-            Evaluation evaluation = response.getToggle(key);
+            HyphenEvaluation evaluation = response.getToggle(key);
             
             if (evaluation == null) {
                 return ProviderEvaluation.<Double>builder()
@@ -222,7 +222,7 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
-            Evaluation evaluation = response.getToggle(key);
+            HyphenEvaluation evaluation = response.getToggle(key);
             
             if (evaluation == null) {
                 return ProviderEvaluation.<Value>builder()
@@ -265,7 +265,7 @@ public class HyphenProvider implements FeatureProvider {
     }
 
     public void sendTelemetry(String key, FlagEvaluationDetails<?> details) {
-        Evaluation evaluation = new Evaluation();
+        HyphenEvaluation evaluation = new HyphenEvaluation();
         evaluation.setKey(key);
         evaluation.setValue(String.valueOf(details.getValue()));
         evaluation.setType("unknown");

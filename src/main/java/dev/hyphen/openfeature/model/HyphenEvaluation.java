@@ -2,7 +2,7 @@ package dev.hyphen.openfeature.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Evaluation {
+public class HyphenEvaluation {
     @JsonProperty("key")
     private String key;
 
