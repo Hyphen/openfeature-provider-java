@@ -1,153 +1,175 @@
 package dev.hyphen.openfeature;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import dev.hyphen.openfeature.model.Evaluation;
+import dev.hyphen.openfeature.model.EvaluationResponse;
+import dev.openfeature.sdk.EvaluationContext;
+import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import dev.openfeature.sdk.Value;
 
 public class HyphenClient {
-    private static final MediaType JSON = MediaType.get("application/json");
+    private static final Logger logger = LoggerFactory.getLogger(HyphenClient.class);
+    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    
-    private final String publicKey;
-    private final List<String> horizonUrls;
-    private final String defaultHorizonUrl;
+
     private final OkHttpClient httpClient;
     private final Cache<String, EvaluationResponse> cache;
-    private final Function<HyphenEvaluationContext, String> generateCacheKeyFn;
+    private final String publicKey;
+    private final List<String> horizonUrls;
+    private final HyphenProviderOptions options;
 
     public HyphenClient(String publicKey, HyphenProviderOptions options) {
         this.publicKey = publicKey;
-        this.defaultHorizonUrl = buildDefaultHorizonUrl(publicKey);
+        this.options = options;
         this.horizonUrls = new ArrayList<>(options.getHorizonUrls());
-        this.horizonUrls.add(this.defaultHorizonUrl);
-        
+        this.horizonUrls.add(buildDefaultHorizonUrl(publicKey));
+
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .writeTimeout(10, TimeUnit.SECONDS)
                 .build();
 
-        int ttlSeconds = options.getCache() != null ? options.getCache().getTtlSeconds() : 30;
         this.cache = Caffeine.newBuilder()
-                .expireAfterWrite(ttlSeconds, TimeUnit.SECONDS)
+                .expireAfterWrite(Duration.ofSeconds(options.getCacheTtlSeconds()))
                 .build();
-
-        this.generateCacheKeyFn = options.getCache() != null && options.getCache().getGenerateCacheKeyFn() != null
-                ? options.getCache().getGenerateCacheKeyFn()
-                : this::defaultGenerateCacheKey;
     }
 
-    public EvaluationResponse evaluate(HyphenEvaluationContext context) throws IOException {
-        String cacheKey = generateCacheKeyFn.apply(context);
+    public EvaluationResponse evaluate(EvaluationContext context) throws IOException {
+        String payload = prepareEvaluatePayload(context);
+        System.out.println("\n[EVALUATE PAYLOAD] " + payload + "\n");
+        
+        String cacheKey = generateCacheKey(context);
         EvaluationResponse cachedResponse = cache.getIfPresent(cacheKey);
         if (cachedResponse != null) {
             return cachedResponse;
         }
 
-        EvaluationResponse response = tryUrls("/toggle/evaluate", context);
+        EvaluationResponse response = tryUrls("/toggle/evaluate", payload);
         if (response != null) {
             cache.put(cacheKey, response);
         }
         return response;
     }
 
-    public void postTelemetry(TelemetryPayload payload) throws IOException {
-        tryUrls("/toggle/telemetry", payload);
+    private String generateCacheKey(EvaluationContext context) {
+        try {
+            return objectMapper.writeValueAsString(context);
+        } catch (Exception e) {
+            logger.warn("Failed to generate cache key", e);
+            return context.toString();
+        }
     }
 
-    private <T> T tryUrls(String path, Object payload) throws IOException {
+    private String buildDefaultHorizonUrl(String publicKey) {
+        try {
+            String keyWithoutPrefix = publicKey.replace("public_", "");
+            String decoded = new String(Base64.getDecoder().decode(keyWithoutPrefix));
+            String organizationId = decoded.split(":")[0];
+            if (organizationId.matches("^[a-zA-Z0-9_-]+$")) {
+                return "https://" + organizationId + ".toggle.hyphen.cloud";
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to build default horizon URL", e);
+        }
+        return "https://toggle.hyphen.cloud";
+    }
+
+    private EvaluationResponse tryUrls(String path, String payload) throws IOException {
         IOException lastError = null;
 
         for (String baseUrl : horizonUrls) {
             try {
-                String url = normalizeUrl(baseUrl, path);
-                return executePost(url, payload);
+                String url = baseUrl.endsWith("/") ? baseUrl + path.substring(1) : baseUrl + path;
+                Request request = new Request.Builder()
+                        .url(url)
+                        .post(RequestBody.create(payload, JSON))
+                        .addHeader("Content-Type", "application/json")
+                        .addHeader("x-api-key", publicKey)
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected response " + response);
+                    }
+                    String responseBody = response.body().string();
+                    System.out.println("\n[API RESPONSE]");
+                    System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(
+                        objectMapper.readValue(responseBody, Map.class)));
+                    System.out.println();
+                    return objectMapper.readValue(responseBody, EvaluationResponse.class);
+                }
             } catch (IOException e) {
                 lastError = e;
             }
         }
 
-        throw lastError;
+        throw lastError != null ? lastError : new IOException("All URLs failed");
     }
 
-    private <T> T executePost(String url, Object payload) throws IOException {
-        String jsonBody = objectMapper.writeValueAsString(payload);
+    private Map<String, Object> valueToMap(Value value) {
+        if (value == null) return null;
         
-        Request request = new Request.Builder()
-                .url(url)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("x-api-key", publicKey)
-                .post(RequestBody.create(jsonBody, JSON))
-                .build();
-
-        try (Response response = httpClient.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("Unexpected response " + response);
+        if (value.asStructure() != null) {
+            Map<String, Object> structMap = new HashMap<>();
+            for (Map.Entry<String, Value> entry : value.asStructure().asMap().entrySet()) {
+                structMap.put(entry.getKey(), valueToObject(entry.getValue()));
             }
-
-            ResponseBody body = response.body();
-            if (body == null) {
-                return null;
-            }
-
-            String responseBody = body.string();
-            if (responseBody.isEmpty()) {
-                return null;
-            }
-
-            return (T) objectMapper.readValue(responseBody, EvaluationResponse.class);
+            return structMap;
         }
-    }
-
-    private String normalizeUrl(String baseUrl, String path) {
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        if (path.startsWith("/")) {
-            path = path.substring(1);
-        }
-        return baseUrl + "/" + path;
-    }
-
-    private String buildDefaultHorizonUrl(String publicKey) {
-        String orgId = getOrgIdFromPublicKey(publicKey);
-        return orgId != null 
-            ? String.format("https://%s.toggle.hyphen.cloud", orgId)
-            : "https://toggle.hyphen.cloud";
-    }
-
-    private String getOrgIdFromPublicKey(String publicKey) {
-        try {
-            String keyWithoutPrefix = publicKey.replaceFirst("^public_", "");
-            String decoded = new String(Base64.getDecoder().decode(keyWithoutPrefix));
-            String[] parts = decoded.split(":");
-            if (parts.length > 0 && parts[0].matches("^[a-zA-Z0-9_-]+$")) {
-                return parts[0];
-            }
-        } catch (Exception ignored) {
-        }
+        
         return null;
     }
 
-    private String defaultGenerateCacheKey(HyphenEvaluationContext context) {
+    private Object valueToObject(Value value) {
+        if (value == null) return null;
+        
+        if (value.asStructure() != null) {
+            return valueToMap(value);
+        }
+        
+        return value.asObject();
+    }
+
+    private Map<String, Object> contextToMap(EvaluationContext context) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("targetingKey", context.getTargetingKey());
+        
+        Map<String, Value> attributes = context.asMap();
+        for (Map.Entry<String, Value> entry : attributes.entrySet()) {
+            if (!entry.getKey().equals("targetingKey")) {
+                map.put(entry.getKey(), valueToObject(entry.getValue()));
+            }
+        }
+        
+        return map;
+    }
+
+    private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
+        Map<String, Object> contextMap = contextToMap(context);
+        String jsonContext = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(contextMap);
+        System.out.println("\n[CONTEXT AS JSON]");
+        System.out.println(jsonContext);
+        System.out.println();
+        return jsonContext;
+    }
+
+    public void postTelemetry(String key, Evaluation evaluation) {
         try {
-            return objectMapper.writeValueAsString(context);
+            String payload = objectMapper.writeValueAsString(evaluation);
+            System.out.println("\n[TELEMETRY PAYLOAD] " + payload + "\n");
+            tryUrls("/toggle/telemetry", payload);
         } catch (Exception e) {
-            return context.toString();
+            logger.warn("Failed to post telemetry", e);
         }
     }
 }
