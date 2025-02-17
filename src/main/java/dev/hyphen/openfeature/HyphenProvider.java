@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class HyphenProvider implements FeatureProvider {
     private static final Logger logger = LoggerFactory.getLogger(HyphenProvider.class);
@@ -39,229 +40,90 @@ public class HyphenProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
-        try {
-            EvaluationResponse response = client.evaluate(ctx);
-            HyphenEvaluation evaluation = response.getToggle(key);
-            
-            if (evaluation == null) {
-                return ProviderEvaluation.<Boolean>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .build();
-            }
-
-            if (evaluation.getErrorMessage() != null) {
-                return ProviderEvaluation.<Boolean>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.GENERAL)
-                    .errorMessage(evaluation.getErrorMessage())
-                    .build();
-            }
-
-            if (!"boolean".equals(evaluation.getType())) {
-                return ProviderEvaluation.<Boolean>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.TYPE_MISMATCH)
-                    .build();
-            }
-
-            boolean value = Boolean.parseBoolean(evaluation.getValue());
-            return ProviderEvaluation.<Boolean>builder()
-                .value(value)
-                .variant(evaluation.getVariant())
-                .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
-                .build();
-        } catch (Exception e) {
-            logger.error("Error evaluating boolean flag: " + key, e);
-            return ProviderEvaluation.<Boolean>builder()
-                .value(defaultValue)
-                .reason(Reason.ERROR.toString())
-                .build();
-        }
+        return evaluateFlag(key, defaultValue, ctx, "boolean", Boolean::parseBoolean);
     }
 
     @Override
     public ProviderEvaluation<String> getStringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
-        try {
-            EvaluationResponse response = client.evaluate(ctx);
-            HyphenEvaluation evaluation = response.getToggle(key);
-            
-            if (evaluation == null) {
-                return ProviderEvaluation.<String>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .build();
-            }
-
-            if (evaluation.getErrorMessage() != null) {
-                return ProviderEvaluation.<String>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.GENERAL)
-                    .errorMessage(evaluation.getErrorMessage())
-                    .build();
-            }
-
-            if (!"string".equals(evaluation.getType())) {
-                return ProviderEvaluation.<String>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.TYPE_MISMATCH)
-                    .build();
-            }
-
-            return ProviderEvaluation.<String>builder()
-                .value(evaluation.getValue())
-                .variant(evaluation.getVariant())
-                .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
-                .build();
-        } catch (Exception e) {
-            logger.error("Error evaluating string flag: " + key, e);
-            return ProviderEvaluation.<String>builder()
-                .value(defaultValue)
-                .reason(Reason.ERROR.toString())
-                .build();
-        }
+        return evaluateFlag(key, defaultValue, ctx, "string", value -> value);
     }
 
     @Override
     public ProviderEvaluation<Integer> getIntegerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
-        try {
-            EvaluationResponse response = client.evaluate(ctx);
-            HyphenEvaluation evaluation = response.getToggle(key);
-            
-            if (evaluation == null) {
-                return ProviderEvaluation.<Integer>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .build();
-            }
-
-            if (evaluation.getErrorMessage() != null) {
-                return ProviderEvaluation.<Integer>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.GENERAL)
-                    .errorMessage(evaluation.getErrorMessage())
-                    .build();
-            }
-
-            if (!"number".equals(evaluation.getType())) {
-                return ProviderEvaluation.<Integer>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.TYPE_MISMATCH)
-                    .build();
-            }
-
-            return ProviderEvaluation.<Integer>builder()
-                .value(Integer.parseInt(evaluation.getValue()))
-                .variant(evaluation.getVariant())
-                .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
-                .build();
-        } catch (Exception e) {
-            logger.error("Error evaluating integer flag: " + key, e);
-            return ProviderEvaluation.<Integer>builder()
-                .value(defaultValue)
-                .reason(Reason.ERROR.toString())
-                .build();
-        }
+        return evaluateFlag(key, defaultValue, ctx, "number", Integer::parseInt);
     }
 
     @Override
     public ProviderEvaluation<Double> getDoubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
-        try {
-            EvaluationResponse response = client.evaluate(ctx);
-            HyphenEvaluation evaluation = response.getToggle(key);
-            
-            if (evaluation == null) {
-                return ProviderEvaluation.<Double>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .build();
-            }
-
-            if (evaluation.getErrorMessage() != null) {
-                return ProviderEvaluation.<Double>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.GENERAL)
-                    .errorMessage(evaluation.getErrorMessage())
-                    .build();
-            }
-
-            if (!"number".equals(evaluation.getType())) {
-                return ProviderEvaluation.<Double>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.TYPE_MISMATCH)
-                    .build();
-            }
-
-            return ProviderEvaluation.<Double>builder()
-                .value(Double.parseDouble(evaluation.getValue()))
-                .variant(evaluation.getVariant())
-                .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
-                .build();
-        } catch (Exception e) {
-            logger.error("Error evaluating double flag: " + key, e);
-            return ProviderEvaluation.<Double>builder()
-                .value(defaultValue)
-                .reason(Reason.ERROR.toString())
-                .build();
-        }
+        return evaluateFlag(key, defaultValue, ctx, "number", Double::parseDouble);
     }
 
     @Override
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
+        return evaluateFlag(key, defaultValue, ctx, "object", value -> {
+            try {
+                Map<String, Object> objectValue = objectMapper.readValue(value, Map.class);
+                return new Value(objectValue);
+            } catch (Exception e) {
+                throw new RuntimeException("Error parsing object value", e);
+            }
+        });
+    }
+
+    private <T> ProviderEvaluation<T> evaluateFlag(
+            String key,
+            T defaultValue,
+            EvaluationContext ctx,
+            String expectedType,
+            Function<String, T> valueConverter) {
         try {
             EvaluationResponse response = client.evaluate(ctx);
             HyphenEvaluation evaluation = response.getToggle(key);
-            
+
             if (evaluation == null) {
-                return ProviderEvaluation.<Value>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .build();
+                return buildErrorEvaluation(defaultValue, ErrorCode.FLAG_NOT_FOUND);
             }
 
             if (evaluation.getErrorMessage() != null) {
-                return ProviderEvaluation.<Value>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.GENERAL)
-                    .errorMessage(evaluation.getErrorMessage())
-                    .build();
+                return buildErrorEvaluation(defaultValue, ErrorCode.GENERAL, evaluation.getErrorMessage());
             }
 
-            if (!"object".equals(evaluation.getType())) {
-                return ProviderEvaluation.<Value>builder()
-                    .value(defaultValue)
-                    .reason(Reason.ERROR.toString())
-                    .errorCode(ErrorCode.TYPE_MISMATCH)
-                    .build();
+            if (!expectedType.equals(evaluation.getType())) {
+                return buildErrorEvaluation(defaultValue, ErrorCode.TYPE_MISMATCH);
             }
 
-            Map<String, Object> objectValue = objectMapper.readValue(evaluation.getValue(), Map.class);
-            return ProviderEvaluation.<Value>builder()
-                .value(new Value(objectValue))
+            T value = valueConverter.apply(evaluation.getValue());
+            return buildSuccessEvaluation(value, evaluation);
+        } catch (Exception e) {
+            logger.error("Error evaluating flag: " + key, e);
+            return buildErrorEvaluation(defaultValue, null);
+        }
+    }
+
+    private <T> ProviderEvaluation<T> buildErrorEvaluation(T defaultValue, ErrorCode code) {
+        return buildErrorEvaluation(defaultValue, code, null);
+    }
+
+    private <T> ProviderEvaluation<T> buildErrorEvaluation(T defaultValue, ErrorCode code, String message) {
+        var builder = ProviderEvaluation.<T>builder()
+                .value(defaultValue)
+                .reason(Reason.ERROR.toString());
+
+        if (code != null) {
+            builder.errorCode(code);
+        }
+        if (message != null) {
+            builder.errorMessage(message);
+        }
+        return builder.build();
+    }
+
+    private <T> ProviderEvaluation<T> buildSuccessEvaluation(T value, HyphenEvaluation evaluation) {
+        return ProviderEvaluation.<T>builder()
+                .value(value)
                 .variant(evaluation.getVariant())
                 .reason(evaluation.getReason() != null ? evaluation.getReason() : Reason.TARGETING_MATCH.toString())
                 .build();
-        } catch (Exception e) {
-            logger.error("Error evaluating object flag: " + key, e);
-            return ProviderEvaluation.<Value>builder()
-                .value(defaultValue)
-                .reason(Reason.ERROR.toString())
-                .build();
-        }
     }
 
     public void sendTelemetry(String key, FlagEvaluationDetails<?> details) {
@@ -272,7 +134,7 @@ public class HyphenProvider implements FeatureProvider {
         evaluation.setReason(details.getReason());
         evaluation.setErrorMessage(details.getErrorMessage());
         evaluation.setVariant(details.getVariant());
-        
+
         client.postTelemetry(key, evaluation);
     }
 }
