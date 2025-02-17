@@ -15,7 +15,7 @@ public class HyphenEvaluation {
     @JsonProperty("reason")
     private String reason;
 
-    @JsonProperty("errorMessage")
+    @JsonProperty("error_message")
     private String errorMessage;
 
     @JsonProperty("variant")
@@ -67,5 +67,17 @@ public class HyphenEvaluation {
 
     public void setVariant(String variant) {
         this.variant = variant;
+    }
+
+    @Override
+    public String toString() {
+        return "HyphenEvaluation{" +
+                "key='" + key + '\'' +
+                ", value='" + value + '\'' +
+                ", type='" + type + '\'' +
+                ", reason='" + reason + '\'' +
+                ", errorMessage='" + errorMessage + '\'' +
+                ", variant='" + variant + '\'' +
+                '}';
     }
 }

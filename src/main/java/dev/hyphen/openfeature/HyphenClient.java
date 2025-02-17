@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import dev.openfeature.sdk.Value;
 
 public class HyphenClient {
@@ -45,15 +46,15 @@ public class HyphenClient {
     }
 
     public EvaluationResponse evaluate(EvaluationContext context) throws IOException {
-        String payload = prepareEvaluatePayload(context);
+        var payload = prepareEvaluatePayload(context);
+        var cacheKey = generateCacheKey(context);
         
-        String cacheKey = generateCacheKey(context);
-        EvaluationResponse cachedResponse = cache.getIfPresent(cacheKey);
+        var cachedResponse = cache.getIfPresent(cacheKey);
         if (cachedResponse != null) {
             return cachedResponse;
         }
 
-        EvaluationResponse response = tryUrls("/toggle/evaluate", payload);
+        var response = tryUrls("/toggle/evaluate", payload);
         if (response != null) {
             cache.put(cacheKey, response);
         }
@@ -71,36 +72,37 @@ public class HyphenClient {
 
     private String buildDefaultHorizonUrl(String publicKey) {
         try {
-            String keyWithoutPrefix = publicKey.replace("public_", "");
-            String decoded = new String(Base64.getDecoder().decode(keyWithoutPrefix));
-            String organizationId = decoded.split(":")[0];
-            if (organizationId.matches("^[a-zA-Z0-9_-]+$")) {
-                return "https://" + organizationId + ".toggle.hyphen.cloud";
-            }
+            var keyWithoutPrefix = publicKey.replace("public_", "");
+            var decoded = new String(Base64.getDecoder().decode(keyWithoutPrefix));
+            var organizationId = decoded.split(":")[0];
+            
+            return organizationId.matches("^[a-zA-Z0-9_-]+$") 
+                ? "https://" + organizationId + ".toggle.hyphen.cloud"
+                : "https://toggle.hyphen.cloud";
         } catch (Exception e) {
             logger.warn("Failed to build default horizon URL", e);
+            return "https://toggle.hyphen.cloud";
         }
-        return "https://toggle.hyphen.cloud";
     }
 
     private EvaluationResponse tryUrls(String path, String payload) throws IOException {
         IOException lastError = null;
 
-        for (String baseUrl : horizonUrls) {
+        for (var baseUrl : horizonUrls) {
             try {
-                String url = baseUrl.endsWith("/") ? baseUrl + path.substring(1) : baseUrl + path;
-                Request request = new Request.Builder()
+                var url = baseUrl.endsWith("/") ? baseUrl + path.substring(1) : baseUrl + path;
+                var request = new Request.Builder()
                         .url(url)
                         .post(RequestBody.create(payload, JSON))
                         .addHeader("Content-Type", "application/json")
                         .addHeader("x-api-key", publicKey)
                         .build();
 
-                try (Response response = httpClient.newCall(request).execute()) {
+                try (var response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         throw new IOException("Unexpected response " + response);
                     }
-                    String responseBody = response.body().string();
+                    var responseBody = response.body().string();
                     return objectMapper.readValue(responseBody, EvaluationResponse.class);
                 }
             } catch (IOException e) {
@@ -112,45 +114,33 @@ public class HyphenClient {
     }
 
     private Map<String, Object> valueToMap(Value value) {
-        if (value == null) return null;
+        if (value == null || value.asStructure() == null) return null;
         
-        if (value.asStructure() != null) {
-            Map<String, Object> structMap = new HashMap<>();
-            for (Map.Entry<String, Value> entry : value.asStructure().asMap().entrySet()) {
-                structMap.put(entry.getKey(), valueToObject(entry.getValue()));
-            }
-            return structMap;
-        }
-        
-        return null;
+        return value.asStructure().asMap().entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                entry -> valueToObject(entry.getValue())
+            ));
     }
 
     private Object valueToObject(Value value) {
         if (value == null) return null;
-        
-        if (value.asStructure() != null) {
-            return valueToMap(value);
-        }
-        
-        return value.asObject();
+        return value.asStructure() != null ? valueToMap(value) : value.asObject();
     }
 
     private Map<String, Object> contextToMap(EvaluationContext context) {
-        Map<String, Object> map = new HashMap<>();
+        var map = new HashMap<String, Object>();
         map.put("targetingKey", context.getTargetingKey());
         
-        Map<String, Value> attributes = context.asMap();
-        for (Map.Entry<String, Value> entry : attributes.entrySet()) {
-            if (!entry.getKey().equals("targetingKey")) {
-                map.put(entry.getKey(), valueToObject(entry.getValue()));
-            }
-        }
+        context.asMap().entrySet().stream()
+            .filter(entry -> !entry.getKey().equals("targetingKey"))
+            .forEach(entry -> map.put(entry.getKey(), valueToObject(entry.getValue())));
         
         return map;
     }
 
     private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
-        Map<String, Object> contextMap = contextToMap(context);
+        var contextMap = contextToMap(context);
         return objectMapper.writeValueAsString(contextMap);
     }
 

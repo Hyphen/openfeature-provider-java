@@ -2,6 +2,7 @@ package dev.hyphen.openfeature;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class HyphenProviderOptions {
     private final String application;
@@ -11,9 +12,9 @@ public class HyphenProviderOptions {
     private final int cacheTtlSeconds;
 
     private HyphenProviderOptions(Builder builder) {
-        this.application = builder.application;
-        this.environment = builder.environment;
-        this.horizonUrls = builder.horizonUrls;
+        this.application = Objects.requireNonNull(builder.application, "application is required");
+        this.environment = Objects.requireNonNull(builder.environment, "environment is required");
+        this.horizonUrls = new ArrayList<>(builder.horizonUrls);
         this.enableToggleUsage = builder.enableToggleUsage;
         this.cacheTtlSeconds = builder.cacheTtlSeconds;
     }
@@ -27,7 +28,7 @@ public class HyphenProviderOptions {
     }
 
     public List<String> getHorizonUrls() {
-        return horizonUrls;
+        return new ArrayList<>(horizonUrls);
     }
 
     public boolean isEnableToggleUsage() {
@@ -43,7 +44,7 @@ public class HyphenProviderOptions {
         private String environment;
         private List<String> horizonUrls = new ArrayList<>();
         private boolean enableToggleUsage = true;
-        private int cacheTtlSeconds = 30;
+        private int cacheTtlSeconds = 300;
 
         public Builder application(String application) {
             this.application = application;
@@ -56,7 +57,7 @@ public class HyphenProviderOptions {
         }
 
         public Builder horizonUrls(List<String> horizonUrls) {
-            this.horizonUrls = horizonUrls;
+            this.horizonUrls = new ArrayList<>(horizonUrls);
             return this;
         }
 
@@ -71,12 +72,6 @@ public class HyphenProviderOptions {
         }
 
         public HyphenProviderOptions build() {
-            if (application == null || application.isEmpty()) {
-                throw new IllegalArgumentException("Application is required");
-            }
-            if (environment == null || environment.isEmpty()) {
-                throw new IllegalArgumentException("Environment is required");
-            }
             return new HyphenProviderOptions(this);
         }
     }
