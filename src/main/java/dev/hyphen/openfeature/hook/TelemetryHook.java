@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import dev.hyphen.openfeature.HyphenProvider;
 import dev.hyphen.openfeature.HyphenClient;
+import dev.hyphen.openfeature.HyphenProviderOptions;
 import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.Hook;
 import dev.openfeature.sdk.HookContext;
@@ -15,9 +16,11 @@ import java.util.HashMap;
 public class TelemetryHook implements Hook {
     private final HyphenClient client;
     private final ObjectMapper objectMapper;
+    private final HyphenProviderOptions options;
 
     public TelemetryHook(HyphenProvider provider) {
         this.client = provider.getClient();
+        this.options = provider.getOptions();
         this.objectMapper = new ObjectMapper()
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             .enable(SerializationFeature.INDENT_OUTPUT)
@@ -53,6 +56,10 @@ public class TelemetryHook implements Hook {
         data.put("toggle", cleanupDetails(context, details));
         
         Map<String, Object> contextMap = ContextUtils.contextToMap(context.getCtx());
+        
+        // Add application and environment from options
+        contextMap.put("application", options.getApplication());
+        contextMap.put("environment", options.getEnvironment());
         
         Map<String, Object> fullPayload = new HashMap<>();
         fullPayload.put("context", contextMap);

@@ -29,6 +29,10 @@ public class HyphenProvider implements FeatureProvider {
         return client;
     }
 
+    public HyphenProviderOptions getOptions() {
+        return options;
+    }
+
     @Override
     public Metadata getMetadata() {
         return () -> "hyphen-provider-java";

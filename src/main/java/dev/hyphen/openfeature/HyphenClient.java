@@ -25,9 +25,11 @@ public class HyphenClient {
     private final Cache<String, EvaluationResponse> cache;
     private final String publicKey;
     private final List<String> horizonUrls;
+    private final HyphenProviderOptions options;
 
     public HyphenClient(String publicKey, HyphenProviderOptions options) {
         this.publicKey = publicKey;
+        this.options = options;
         this.horizonUrls = new ArrayList<>(options.getHorizonUrls());
         this.horizonUrls.add(buildDefaultHorizonUrl(publicKey));
 
@@ -112,6 +114,11 @@ public class HyphenClient {
 
     private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
         var contextMap = ContextUtils.contextToMap(context);
+        
+        // Add application and environment from options
+        contextMap.put("application", options.getApplication());
+        contextMap.put("environment", options.getEnvironment());
+        
         return objectMapper.writeValueAsString(contextMap);
     }
 
