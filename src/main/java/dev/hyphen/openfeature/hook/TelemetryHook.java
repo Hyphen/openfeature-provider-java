@@ -73,7 +73,7 @@ public class TelemetryHook implements Hook {
             
             client.postTelemetry(fullPayload);
         } catch (Exception e) {
-            System.out.println("Failed to serialize payload to JSON: " + e.getMessage());
+            // Silently ignore telemetry failures
         }
     }
 }

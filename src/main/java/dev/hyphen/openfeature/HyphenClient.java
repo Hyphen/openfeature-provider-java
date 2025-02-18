@@ -8,16 +8,12 @@ import dev.hyphen.openfeature.model.EvaluationResponse;
 import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.EvaluationContext;
 import okhttp3.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class HyphenClient {
-    private static final Logger logger = LoggerFactory.getLogger(HyphenClient.class);
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -64,7 +60,6 @@ public class HyphenClient {
         try {
             return objectMapper.writeValueAsString(context);
         } catch (Exception e) {
-            logger.warn("Failed to generate cache key", e);
             return context.toString();
         }
     }
@@ -79,7 +74,6 @@ public class HyphenClient {
                 ? "https://" + organizationId + ".toggle.hyphen.cloud"
                 : "https://toggle.hyphen.cloud";
         } catch (Exception e) {
-            logger.warn("Failed to build default horizon URL", e);
             return "https://toggle.hyphen.cloud";
         }
     }
@@ -126,7 +120,7 @@ public class HyphenClient {
         try {
             tryUrls("/toggle/telemetry", objectMapper.writeValueAsString(payload));
         } catch (Exception e) {
-            logger.warn("Failed to post telemetry", e);
+            // Silently ignore telemetry failures
         }
     }
 }

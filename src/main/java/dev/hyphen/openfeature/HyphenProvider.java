@@ -5,9 +5,6 @@ import dev.hyphen.openfeature.hook.TelemetryHook;
 import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
 import dev.openfeature.sdk.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,7 +12,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class HyphenProvider implements FeatureProvider {
-    private static final Logger logger = LoggerFactory.getLogger(HyphenProvider.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final HyphenClient client;
     private final HyphenProviderOptions options;
@@ -103,7 +99,6 @@ public class HyphenProvider implements FeatureProvider {
             T value = valueConverter.apply(evaluation.getValue());
             return buildSuccessEvaluation(value, evaluation);
         } catch (Exception e) {
-            logger.error("Error evaluating flag: " + key, e);
             return buildErrorEvaluation(defaultValue, null);
         }
     }
