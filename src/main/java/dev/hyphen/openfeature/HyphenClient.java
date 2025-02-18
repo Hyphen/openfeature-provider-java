@@ -1,9 +1,9 @@
 package dev.hyphen.openfeature;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
 import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.EvaluationContext;
@@ -15,7 +15,11 @@ import java.util.concurrent.TimeUnit;
 
 public class HyphenClient {
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper()
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+            .enable(SerializationFeature.INDENT_OUTPUT)
+            .setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            .setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY);
 
     private final OkHttpClient httpClient;
     private final Cache<String, EvaluationResponse> cache;
@@ -41,7 +45,9 @@ public class HyphenClient {
     }
 
     public EvaluationResponse evaluate(EvaluationContext context) throws IOException {
-        var payload = prepareEvaluatePayload(context);
+        var contextMap = prepareEvaluatePayload(context);
+        String payload = objectMapper.writeValueAsString(contextMap);
+        System.out.println("Evaluate - Payload: " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(contextMap));
         var cacheKey = generateCacheKey(context);
         
         var cachedResponse = cache.getIfPresent(cacheKey);
@@ -96,6 +102,9 @@ public class HyphenClient {
                         throw new IOException("Unexpected response " + response);
                     }
                     var responseBody = response.body().string();
+                    System.out.println("Evaluate - Response: " + objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(
+                        objectMapper.readTree(responseBody)
+                    ));
                     return objectMapper.readValue(responseBody, EvaluationResponse.class);
                 }
             } catch (IOException e) {
@@ -106,14 +115,14 @@ public class HyphenClient {
         throw lastError != null ? lastError : new IOException("All URLs failed");
     }
 
-    private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
+    private Map<String, Object> prepareEvaluatePayload(EvaluationContext context) throws IOException {
         var contextMap = ContextUtils.contextToMap(context);
         
         // Add application and environment from options
         contextMap.put("application", options.getApplication());
         contextMap.put("environment", options.getEnvironment());
         
-        return objectMapper.writeValueAsString(contextMap);
+        return contextMap;
     }
 
     public void postTelemetry(Map<String, Object> payload) {

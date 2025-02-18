@@ -66,8 +66,10 @@ public class HyphenProvider implements FeatureProvider {
     public ProviderEvaluation<Value> getObjectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
         return evaluateFlag(key, defaultValue, ctx, "object", value -> {
             try {
+                // First parse the JSON string into a Map
                 Map<String, Object> objectValue = objectMapper.readValue(value, Map.class);
-                return new Value(objectValue);
+                // Then convert the Map to a Value object using objectToValue
+                return Value.objectToValue(objectValue);
             } catch (Exception e) {
                 throw new RuntimeException("Error parsing object value", e);
             }
