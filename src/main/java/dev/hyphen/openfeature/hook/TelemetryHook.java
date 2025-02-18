@@ -4,15 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import dev.hyphen.openfeature.HyphenProvider;
 import dev.hyphen.openfeature.HyphenClient;
+import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.Hook;
 import dev.openfeature.sdk.HookContext;
 import dev.openfeature.sdk.FlagEvaluationDetails;
-import dev.openfeature.sdk.EvaluationContext;
-import dev.openfeature.sdk.Value;
 
 import java.util.Map;
 import java.util.HashMap;
-import java.util.stream.Collectors;
 
 public class TelemetryHook implements Hook {
     private final HyphenClient client;
@@ -25,32 +23,6 @@ public class TelemetryHook implements Hook {
             .enable(SerializationFeature.INDENT_OUTPUT)
             .setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
             .setSerializationInclusion(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY);
-    }
-
-    private Map<String, Object> valueToMap(Value value) {
-        if (value == null || value.asStructure() == null) return null;
-        
-        return value.asStructure().asMap().entrySet().stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                entry -> valueToObject(entry.getValue())
-            ));
-    }
-
-    private Object valueToObject(Value value) {
-        if (value == null) return null;
-        return value.asStructure() != null ? valueToMap(value) : value.asObject();
-    }
-
-    private Map<String, Object> contextToMap(EvaluationContext context) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("targetingKey", context.getTargetingKey());
-        
-        context.asMap().entrySet().stream()
-            .filter(entry -> !entry.getKey().equals("targetingKey"))
-            .forEach(entry -> map.put(entry.getKey(), valueToObject(entry.getValue())));
-        
-        return map;
     }
 
     private Map<String, Object> cleanupDetails(HookContext context, FlagEvaluationDetails<?> details) {
@@ -80,7 +52,7 @@ public class TelemetryHook implements Hook {
         Map<String, Object> data = new HashMap<>();
         data.put("toggle", cleanupDetails(context, details));
         
-        Map<String, Object> contextMap = contextToMap(context.getCtx());
+        Map<String, Object> contextMap = ContextUtils.contextToMap(context.getCtx());
         
         Map<String, Object> fullPayload = new HashMap<>();
         fullPayload.put("context", contextMap);

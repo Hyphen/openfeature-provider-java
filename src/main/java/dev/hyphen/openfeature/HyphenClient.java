@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
+import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.EvaluationContext;
 import okhttp3.*;
 import org.slf4j.Logger;
@@ -14,8 +15,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import dev.openfeature.sdk.Value;
 
 public class HyphenClient {
     private static final Logger logger = LoggerFactory.getLogger(HyphenClient.class);
@@ -111,34 +110,8 @@ public class HyphenClient {
         throw lastError != null ? lastError : new IOException("All URLs failed");
     }
 
-    private Map<String, Object> valueToMap(Value value) {
-        if (value == null || value.asStructure() == null) return null;
-        
-        return value.asStructure().asMap().entrySet().stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                entry -> valueToObject(entry.getValue())
-            ));
-    }
-
-    private Object valueToObject(Value value) {
-        if (value == null) return null;
-        return value.asStructure() != null ? valueToMap(value) : value.asObject();
-    }
-
-    private Map<String, Object> contextToMap(EvaluationContext context) {
-        var map = new HashMap<String, Object>();
-        map.put("targetingKey", context.getTargetingKey());
-        
-        context.asMap().entrySet().stream()
-            .filter(entry -> !entry.getKey().equals("targetingKey"))
-            .forEach(entry -> map.put(entry.getKey(), valueToObject(entry.getValue())));
-        
-        return map;
-    }
-
     private String prepareEvaluatePayload(EvaluationContext context) throws IOException {
-        var contextMap = contextToMap(context);
+        var contextMap = ContextUtils.contextToMap(context);
         return objectMapper.writeValueAsString(contextMap);
     }
 
