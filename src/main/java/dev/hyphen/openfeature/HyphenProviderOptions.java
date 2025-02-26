@@ -4,11 +4,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Configuration options for the Hyphen Provider.
+ */
 public class HyphenProviderOptions {
+    /** The application name or ID for the current evaluation. */
     private final String application;
+    
+    /** 
+     * The environment identifier for the Hyphen project.
+     * This can be either:
+     * - A project environment ID (e.g., `pevr_abc123`)
+     * - A valid alternateId (1-25 characters, lowercase letters, numbers, hyphens, and underscores)
+     */
     private final String environment;
+    
+    /** The Hyphen server URL */
     private final List<String> horizonUrls;
+    
+    /** Flag to enable toggle usage */
     private final boolean enableToggleUsage;
+    
+    /** The time-to-live (TTL) in seconds for the cache. */
     private final int cacheTtlSeconds;
 
     private HyphenProviderOptions(Builder builder) {

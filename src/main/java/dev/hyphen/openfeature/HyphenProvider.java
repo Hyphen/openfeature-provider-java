@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.hyphen.openfeature.hook.TelemetryHook;
 import dev.hyphen.openfeature.model.HyphenEvaluation;
 import dev.hyphen.openfeature.model.EvaluationResponse;
+import dev.hyphen.openfeature.util.ValidationUtils;
 import dev.openfeature.sdk.*;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +18,7 @@ public class HyphenProvider implements FeatureProvider {
     private final HyphenProviderOptions options;
 
     public HyphenProvider(String publicKey, HyphenProviderOptions options) {
+        ValidationUtils.validateOptions(options);
         this.client = new HyphenClient(publicKey, options);
         this.options = options;
     }
