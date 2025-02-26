@@ -24,7 +24,16 @@ public class ContextUtils {
 
     public static Object valueToObject(Value value) {
         if (value == null) return null;
-        return value.asStructure() != null ? valueToMap(value) : value.asObject();
+        
+        if (value.isStructure()) {
+            return valueToMap(value);
+        } else if (value.isList()) {
+            return value.asList().stream()
+                .map(ContextUtils::valueToObject)
+                .collect(Collectors.toList());
+        } else {
+            return value.asObject();
+        }
     }
 
     public static Map<String, Object> contextToMap(EvaluationContext context) {

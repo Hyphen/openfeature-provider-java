@@ -9,6 +9,7 @@ import dev.hyphen.openfeature.util.ContextUtils;
 import dev.openfeature.sdk.Hook;
 import dev.openfeature.sdk.HookContext;
 import dev.openfeature.sdk.FlagEvaluationDetails;
+import dev.openfeature.sdk.Value;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -31,7 +32,18 @@ public class TelemetryHook implements Hook {
     private Map<String, Object> cleanupDetails(HookContext context, FlagEvaluationDetails<?> details) {
         Map<String, Object> cleanDetails = new HashMap<>();
         cleanDetails.put("key", details.getFlagKey());
-        cleanDetails.put("value", details.getValue());
+        
+        if (details.getValue() instanceof Value) {
+            Value value = (Value) details.getValue();
+            if (value.isStructure()) {
+                cleanDetails.put("value", ContextUtils.valueToMap(value));
+            } else {
+                cleanDetails.put("value", value.asObject());
+            }
+        } else {
+            cleanDetails.put("value", details.getValue());
+        }
+        
         cleanDetails.put("type", context.getType().toString().toLowerCase());
         
         if (details.getVariant() != null) {
