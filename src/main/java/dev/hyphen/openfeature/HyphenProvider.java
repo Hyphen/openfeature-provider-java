@@ -46,7 +46,14 @@ public class HyphenProvider implements FeatureProvider {
 
     @Override
     public ProviderEvaluation<Boolean> getBooleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
-        return evaluateFlag(key, defaultValue, ctx, "boolean", Boolean::parseBoolean);
+        return evaluateFlag(key, defaultValue, ctx, "boolean", value -> {
+            if (value instanceof String stringValue) {
+                return stringValue.toLowerCase().equals("true");
+            } else if (value instanceof Boolean boolValue) {
+                return boolValue;
+            }
+            return defaultValue;
+        });
     }
 
     @Override
